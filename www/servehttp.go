@@ -1,7 +1,6 @@
 package verboten
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/reiver/badgerverse.app/srv/http"
@@ -27,8 +26,14 @@ func serveHTTP(responsewriter http.ResponseWriter, request *http.Request) {
 	if nil == request {
 		const code int = http.StatusInternalServerError
 		http.Error(responsewriter, http.StatusText(code), code)
+		log.Error("nil http-request")
 		return
 	}
 
-	io.WriteString(responsewriter, "<h1>badgerverse.app</h1><p>mushroom, mushroom.</p>")
+	{
+		_, err := responsewriter.Write(webpage)
+		if nil != err {
+			log.Errorf("problem writing http-response to http-client: %s", err)
+		}
+	}
 }
