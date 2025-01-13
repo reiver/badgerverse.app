@@ -8,7 +8,7 @@ func main() {
 	log := logsrv.Prefix("main")
 
 	log.Inform("badgerverse.app ⚡")
-	yell()
+	tell()
 
 	log.Inform("Here we go…")
 	webserve()

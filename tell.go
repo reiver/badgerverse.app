@@ -5,7 +5,7 @@ import (
 	"math/rand"
 )
 
-func yell() {
+func tell() {
 	const red     = 31
 	const green   = 32
 	const yellow  = 33
