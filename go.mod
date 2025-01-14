@@ -3,8 +3,10 @@ module github.com/reiver/badgerverse.app
 go 1.23
 
 require (
+	github.com/reiver/go-htmlescape v0.0.0-20250114014205-592635259450
 	github.com/reiver/go-log v1.1.1-0.20250112073952-9561cd42d7ec
 	github.com/reiver/go-pathmux v0.0.0-20250113184313-b773d1ae8cb7
+	github.com/reiver/go-tmpl v1.0.0
 )
 
 require (
