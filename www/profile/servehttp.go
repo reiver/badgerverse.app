@@ -1,9 +1,13 @@
 package verboten
 
 import (
+	htmltemplate "html/template"
 	"net/http"
 	"net/url"
+	"strings"
 
+	"github.com/reiver/badgerverse.app/lib/label"
+	"github.com/reiver/badgerverse.app/srv/demo"
 	"github.com/reiver/badgerverse.app/srv/http"
 	"github.com/reiver/badgerverse.app/srv/log"
 )
@@ -59,10 +63,33 @@ func serveHTTP(responsewriter http.ResponseWriter, request *http.Request) {
 	}
 	log.Informf("who: %q", who)
 
+	var tmplParams struct {
+		COVERIMAGE htmltemplate.URL
+		ICONIMAGE htmltemplate.URL
+		LABELS []label.Label
+		NAME string
+		SUMMARY string
+		WHO string
+	}
+	switch strings.ToLower(who) {
+	case demosrv.REIVER_WHO:
+		tmplParams.COVERIMAGE = htmltemplate.URL(demosrv.REIVER_COVERIMAGE)
+		tmplParams.ICONIMAGE  = htmltemplate.URL(demosrv.REIVER_ICONIMAGE)
+		tmplParams.LABELS     = demosrv.REIVER_LABELS
+		tmplParams.NAME       = demosrv.REIVER_NAME
+		tmplParams.SUMMARY    = demosrv.REIVER_SUMMARY
+		tmplParams.WHO        = demosrv.REIVER_WHO
+	default:
+		const code int = http.StatusNotFound
+		http.Error(responsewriter, http.StatusText(code), code)
+		log.Error("TODO: fetch profile")
+		return
+	}
+
 	{
-		_, err := responsewriter.Write([]byte("who: "+who))
+		err := template.Execute(responsewriter, tmplParams)
 		if nil != err {
-			log.Errorf("problem writing http-response to http-client: %s", err)
+			log.Errorf("problem rendering template to HTML and writing http-response to http-client: %s", err)
 		}
 	}
 }
