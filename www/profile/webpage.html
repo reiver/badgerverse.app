@@ -41,7 +41,18 @@
 	<div class="text-center mt-2">
 		<h2 class="font-semibold">{{.NAME}}</h2>
 		<p class="text-gray-500">{{.WHO}}</p>
-		<p class="text-xs text-gray-400 py-2 px-7 mt-2">{{.SUMMARY}}</p>
+		<p
+			class="text-xs text-gray-400 py-2 px-7 mt-2"
+			style="
+				display:-webkit-box;
+				-webkit-box-orient:vertical;
+				overflow:hidden;
+
+				-webkit-line-clamp:8;
+				line-clamp:8;
+
+			"
+		>{{.SUMMARY}}</p>
 	</div>
 
 	<ul
