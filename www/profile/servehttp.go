@@ -6,8 +6,14 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/reiver/go-fediverseid"
+	mstdnent    "github.com/reiver/go-mstdn/ent"
+	mstdnlookup "github.com/reiver/go-mstdn/api/v1/accounts/lookup"
+
 	"github.com/reiver/badgerverse.app/lib/label"
+	"github.com/reiver/badgerverse.app/srv/acct"
 	"github.com/reiver/badgerverse.app/srv/demo"
+	"github.com/reiver/badgerverse.app/srv/html"
 	"github.com/reiver/badgerverse.app/srv/http"
 	"github.com/reiver/badgerverse.app/srv/log"
 )
@@ -63,12 +69,40 @@ func serveHTTP(responsewriter http.ResponseWriter, request *http.Request) {
 	}
 	log.Informf("who: %q", who)
 
+	var fediverseID fediverseid.FediverseID
+	{
+		var err error
+		fediverseID, err = fediverseid.ParseFediverseID(who)
+		if nil != err {
+			const code int = http.StatusBadRequest
+			http.Error(responsewriter, http.StatusText(code), code)
+			log.Errorf("problem parsing fediverse-id %q: %s", who, err)
+			return
+		}
+	}
+
+	var acctname string
+	var accthost string
+	{
+		acctname = fediverseID.NameElse("")
+
+		accthost = fediverseID.HostElse("")
+		if "" == accthost {
+			const code int = http.StatusBadRequest
+			http.Error(responsewriter, http.StatusText(code), code)
+			log.Errorf("empty fediverse-id host in %q", who)
+			return
+		}
+	}
+	log.Informf("fediverse-id name: %q", acctname)
+	log.Informf("fediverse-id host: %q", accthost)
+
 	var tmplParams struct {
 		COVERIMAGE htmltemplate.URL
 		ICONIMAGE htmltemplate.URL
 		LABELS []label.Label
 		NAME string
-		SUMMARY string
+		SUMMARY htmltemplate.HTML
 		WHO string
 	}
 	switch strings.ToLower(who) {
@@ -77,13 +111,37 @@ func serveHTTP(responsewriter http.ResponseWriter, request *http.Request) {
 		tmplParams.ICONIMAGE  = htmltemplate.URL(demosrv.REIVER_ICONIMAGE)
 		tmplParams.LABELS     = demosrv.REIVER_LABELS
 		tmplParams.NAME       = demosrv.REIVER_NAME
-		tmplParams.SUMMARY    = demosrv.REIVER_SUMMARY
+		tmplParams.SUMMARY    = htmltemplate.HTML(demosrv.REIVER_SUMMARY)
 		tmplParams.WHO        = demosrv.REIVER_WHO
 	default:
-		const code int = http.StatusNotFound
-		http.Error(responsewriter, http.StatusText(code), code)
-		log.Error("TODO: fetch profile")
-		return
+		var account mstdnent.Account
+
+		err := mstdnlookup.Get(&account, accthost, acctname)
+		if nil != err {
+			const code int = http.StatusNotFound
+			http.Error(responsewriter, http.StatusText(code), code)
+			log.Errorf("problem with GET lookup to %q %q: %s", accthost, acctname, err)
+			return
+		}
+
+		tmplParams.COVERIMAGE = htmltemplate.URL(acctsrv.DEFAULT_COVERIMAGE)
+		account.Header.WhenSomething(func(value string){
+			if "" != value {
+				tmplParams.COVERIMAGE = htmltemplate.URL(value)
+			}
+		})
+		tmplParams.ICONIMAGE  = htmltemplate.URL(acctsrv.DEFAULT_ICONIMAGE)
+		account.Avatar.WhenSomething(func(value string){
+			if "" != value {
+				tmplParams.ICONIMAGE = htmltemplate.URL(value)
+			}
+		})
+					
+		tmplParams.LABELS     = nil //@TODO
+					
+		tmplParams.NAME       = account.DisplayName.GetElse("")
+		tmplParams.SUMMARY    = htmltemplate.HTML(htmlsrv.SanitizeString(account.Note.GetElse("")))
+		tmplParams.WHO        = who
 	}
 
 	{
